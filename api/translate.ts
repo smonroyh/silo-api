@@ -1,8 +1,11 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+// import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const { createClient } = require('@supabase/supabase-js');
+// import { createRequire } from 'module';
+// const require = createRequire(import.meta.url);
+// const { createClient } = require('@supabase/supabase-js');
+
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS
@@ -30,11 +33,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("Missing Supabase configuration in server");
+      console.error("Missing Supabase configuration in server - translate.ts:36");
       return res.status(500).json({ error: "Server Configuration Error" });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createSupabaseClient(supabaseUrl, supabaseServiceKey);
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
@@ -44,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 2. Ejecutar lógica de traducción
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      console.error("No OPENAI_API_KEY set");
+      console.error("No OPENAI_API_KEY set - translate.ts:50");
       return res.status(500).json({ error: "Server Configuration Error" });
     }
 
@@ -61,12 +64,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let glossary_str = "";
     if (glossary && Array.isArray(glossary) && glossary.length > 0) {
       // Filtrar glosario solo para la dirección actual
-      const filtered_glossary = glossary.filter((entry: any) => 
+      const filtered_glossary = glossary.filter((entry: any) =>
         entry.sourceLang === source_lang && entry.targetLang === target_lang
       );
-      
+
       if (filtered_glossary.length > 0) {
-        const glossary_items = filtered_glossary.map((entry: any) => 
+        const glossary_items = filtered_glossary.map((entry: any) =>
           `- '${entry.sourceTerm}': '${entry.targetTerm}'`
         ).join("\n");
         glossary_str = `\nCRITICAL: You MUST use the following specific translations:\n${glossary_items}\n`;
@@ -98,7 +101,7 @@ Translate strictly the <current_text> following system instructions.`;
     return res.status(200).json({ translated });
 
   } catch (error: any) {
-    console.error("Error calling OpenAI:", error.message);
+    console.error("Error calling OpenAI: - translate.ts:104", error.message);
     return res.status(500).json({ error: "Failed to translate text" });
   }
 }
