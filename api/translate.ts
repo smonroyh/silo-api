@@ -75,11 +75,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       max_tokens: 150
     });
 
+
+
     const translated = completion.choices[0]?.message?.content?.trim() || '[Error de traducción]';
-    return res.status(200).json({ translated });
+    const totalTokens = completion.usage?.total_tokens;
+    return res.status(200).json({ translated, totalTokens });
 
   } catch (error: any) {
-    console.error("Error calling OpenAI: - translate.ts:82", error.message);
+    console.error("Error calling OpenAI: - translate.ts:85", error.message);
     return res.status(500).json({ error: "Failed to translate text" });
   }
 }
