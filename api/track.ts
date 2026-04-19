@@ -31,21 +31,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const month = new Date().toISOString().slice(0, 7);
 
         // 4. Upsert — si existe el registro del mes lo actualiza, si no lo crea
-        const { error } = await supabase
-            .from('usage')
-            .upsert(
-                {
-                    user_id: user.id,
-                    month,
-                    seconds_used: seconds,
-                    updated_at: new Date().toISOString(),
-                },
-                {
-                    onConflict: 'user_id, month',
-                    // Suma los segundos al valor existente
-                    ignoreDuplicates: false,
-                }
-            );
+        // const { error } = await supabase
+        //     .from('usage')
+        //     .upsert(
+        //         {
+        //             user_id: user.id,
+        //             month,
+        //             seconds_used: seconds,
+        //             updated_at: new Date().toISOString(),
+        //         },
+        //         {
+        //             onConflict: 'user_id, month',
+        //             // Suma los segundos al valor existente
+        //             ignoreDuplicates: false,
+        //         }
+        //     );
 
         // Supabase upsert no suma automáticamente — usamos rpc para incrementar
         const { error: rpcError } = await supabase.rpc('increment_usage', {
