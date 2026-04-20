@@ -22,7 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (authError || !user) return res.status(401).json({ error: 'Invalid session' });
 
         // 2. Recibe los segundos a registrar
-        const { seconds } = req.body;
+        const { seconds, tokens } = req.body;
         if (!seconds || typeof seconds !== 'number' || seconds <= 0) {
             return res.status(400).json({ error: 'Invalid seconds value' });
         }
@@ -30,36 +30,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // 3. Mes actual formato "2026-04"
         const month = new Date().toISOString().slice(0, 7);
 
-        // 4. Upsert — si existe el registro del mes lo actualiza, si no lo crea
-        // const { error } = await supabase
-        //     .from('usage')
-        //     .upsert(
-        //         {
-        //             user_id: user.id,
-        //             month,
-        //             seconds_used: seconds,
-        //             updated_at: new Date().toISOString(),
-        //         },
-        //         {
-        //             onConflict: 'user_id, month',
-        //             // Suma los segundos al valor existente
-        //             ignoreDuplicates: false,
-        //         }
-        //     );
+        // 3. Registrar Segundos Deepgram
+        if (seconds && typeof seconds === 'number' && seconds > 0) {
 
-        // Supabase upsert no suma automáticamente — usamos rpc para incrementar
-        const { error: rpcError } = await supabase.rpc('increment_usage', {
-            p_user_id: user.id,
-            p_month: month,
-            p_seconds: seconds,
-        });
+            const { error: rpcError } = await supabase.rpc('increment_usage', {
+                p_user_id: user.id,
+                p_month: month,
+                p_seconds: seconds,
+            });
+            if (rpcError) throw rpcError;
+        }
 
-        if (rpcError) throw rpcError;
+        // 4. Registrar Tokens OpenAI 
+        if (tokens && typeof tokens === 'number' && tokens > 0) {
+
+            const { error: logError } = await supabase.rpc('increment_usage_openai', {
+                p_user_id: user.id,
+                p_month: month,
+                p_amount: tokens,
+            });
+            if (logError) throw logError;
+        }
 
         return res.status(200).json({ success: true });
 
     } catch (err: any) {
-        console.error('Error tracking usage: - track.ts:62', err.message);
+        console.error('Error tracking usage: - track.ts:58', err.message);
         return res.status(500).json({ error: 'Failed to track usage' });
     }
 }
