@@ -77,7 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error("Error creating Deepgram auth grant: - stt-token.ts:77", errorText);
       let details = errorText;
       try { details = JSON.parse(errorText); } catch (e) { }
-      return res.status(500).json({ error: "Failed to create temp key", details });
+      return res.status(500).json({ error: "Failed to create temp key" });
     }
 
     const tokenData = await tokenResp.json();

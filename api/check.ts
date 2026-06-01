@@ -14,26 +14,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const token = req.headers.authorization?.replace('Bearer ', '');
         if (!token) return res.status(401).json({ error: 'Missing token' });
 
-        const supabase = createClient(
+        // Validar identidad con service role (Key más importante)
+        const adminClient = createClient(
             process.env.VITE_SUPABASE_URL!,
             process.env.SUPABASE_SERVICE_ROLE_KEY!
         );
 
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        const { data: { user }, error: authError } = await adminClient.auth.getUser(token);
         if (authError || !user) return res.status(401).json({ error: 'Invalid session' });
 
-        const month = new Date().toISOString().slice(0, 7);
+
+        // Queries de datos con el JWT del usuario (RLS activo)
+        const userClient = createClient(process.env.VITE_SUPABASE_URL!, process.env.VITE_SUPABASE_ANON_KEY!, {
+            global: { headers: { Authorization: `Bearer ${token}` } }
+        });
+
 
         // Obtiene uso actual del mes
-        const { data: usageData } = await supabase
+        const { data: usageData } = await userClient
             .from('usage')
             .select('seconds_used')
             .eq('user_id', user.id)
-            .eq('month', month)
             .single();
 
         // Obtiene límite del usuario
-        const { data: limitData } = await supabase
+        const { data: limitData } = await userClient
             .from('usage_limits')
             .select('limit_seconds')
             .eq('user_id', user.id)
@@ -55,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
 
     } catch (err: any) {
-        console.error('Error checking usage: - check.ts:58', err.message);
+        console.error('Error checking usage: - check.ts:63', err.message);
         return res.status(500).json({ error: 'Failed to check usage' });
     }
 }
